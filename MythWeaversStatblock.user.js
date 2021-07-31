@@ -1,11 +1,13 @@
 // ==UserScript==
-// @name         Myth-Weavers D&D statblock
+// @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
 // @version      0.11
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
 // @grant        none
+// @supportURL   https://github.com/BlackPhoenix/MythWeaversStatblock/issues
+// @homepageURL  https://github.com/BlackPhoenix/MythWeaversStatblock
 // ==/UserScript==
 //
 // This script uses the "Private Notes" as a template to construct the statblock. It makes a lot of assumption
