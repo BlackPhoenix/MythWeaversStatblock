@@ -1,7 +1,7 @@
 // ==UserScript==
-// @name         Myth-Weavers D&D 5e statblock
+// @name         Myth-Weavers D&D statblock
 // @namespace    http://tampermonkey.net/
-// @version      0.1
+// @version      0.11
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
