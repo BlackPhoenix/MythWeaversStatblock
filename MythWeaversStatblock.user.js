@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
-// @version      0.11
+// @version      0.12
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
@@ -20,21 +20,19 @@
 // Special tags:
 // !!URL!!       The URL of the character sheet.
 
-(function() {
-    'use strict';
+'use strict';
 
-    // Add a new button "Statblock" to the left of the Save button.
-    var sbButtonLI = document.createElement("LI");
-    var sbButton = document.createElement("BUTTON");
-    sbButton.innerHTML = "Statblock";
-    sbButton.className = "btn btn-primary";
-    sbButtonLI.appendChild(sbButton);
-    sbButton.onclick = function() {
-        WriteStatblock();
-    }
-    var sheetControls = document.getElementsByClassName("sheetcontrols")[0];
-    sheetControls.insertBefore(sbButtonLI, sheetControls.childNodes[0]);
-})();
+// Add a new button "Statblock" to the left of the Save button.
+var sbButtonLI = document.createElement("LI");
+var sbButton = document.createElement("BUTTON");
+sbButton.innerHTML = "Statblock";
+sbButton.className = "btn btn-primary";
+sbButtonLI.appendChild(sbButton);
+sbButton.onclick = WriteStatblock;
+var sheetControls = document.getElementsByClassName("sheetcontrols")[0];
+sheetControls.insertBefore(sbButtonLI, sheetControls.childNodes[0]);
+
+// End main
 
 function WriteStatblock() {
     // __txt_private_notes
