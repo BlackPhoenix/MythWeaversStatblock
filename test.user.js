@@ -8,6 +8,7 @@
 // @grant        none
 // @supportURL   https://github.com/BlackPhoenix/MythWeaversStatblock/issues
 // @homepageURL  https://github.com/BlackPhoenix/MythWeaversStatblock
+// @downloadURL  https://github.com/BlackPhoenix/MythWeaversStarWars5e/raw/main/test.user.js
 // ==/UserScript==
 
 'use strict';
