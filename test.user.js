@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Test Script
 // @namespace    http://tampermonkey.net/
-// @version      0.12
+// @version      0.13
 // @description  To test changing the homepage / updateURL
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
