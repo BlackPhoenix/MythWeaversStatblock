@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
-// @version      0.2
+// @version      0.20
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
