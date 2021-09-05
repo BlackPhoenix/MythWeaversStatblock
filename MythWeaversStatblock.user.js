@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
-// @version      0.12
+// @version      1.0
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
@@ -36,7 +36,15 @@ sheetControls.insertBefore(sbButtonLI, sheetControls.childNodes[0]);
 
 function WriteStatblock() {
     // __txt_private_notes
-    var template = document.getElementsByName("__txt_private_notes")[1].innerHTML;
+    var template = "";
+
+    // Special cases: Star Wars Saga
+    if (document.title.includes(":: Star Wars Saga ::")) {
+        template = document.getElementsByName("__txt_private_notes")[0].value;
+    } else {
+        // This works for D&D 5E
+        template = document.getElementsByName("__txt_private_notes")[1].innerHTML;
+    }
 
     // Some hard-coded values
     template = template.replace("!!URL!!", window.location.href);
@@ -60,5 +68,11 @@ function WriteStatblock() {
         }
         output = output.replace(fields[0], value);
     }
-    _sheet.set("__txt_statblock", output);
+    
+    if (document.title.includes(":: Star Wars Saga ::")) {
+        _sheet.set("__txt_statsummary", output);
+    } else {
+        // This works for D&D 5E
+        _sheet.set("__txt_statblock", output);
+    }
 }
