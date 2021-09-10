@@ -1,10 +1,11 @@
 // ==UserScript==
 // @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      2.0
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
+// @require      https://pagecdn.io/lib/mathjs/9.4.4/math.min.js
 // @grant        none
 // @supportURL   https://github.com/BlackPhoenix/MythWeaversStatblock/issues
 // @homepageURL  https://github.com/BlackPhoenix/MythWeaversStatblock
@@ -19,6 +20,11 @@
 //
 // Special tags:
 // !!URL!!       The URL of the character sheet.
+//
+// conditional:
+// {? something = some value {T} result_true {F} result_false ?}
+// Note that "something" and/or "some value" could be in the form of ::identifier::, which would have been
+// converted to their actual values in the process. "<" and ">" are also accepted in addition to "=".
 
 'use strict';
 
@@ -35,7 +41,6 @@ sheetControls.insertBefore(sbButtonLI, sheetControls.childNodes[0]);
 // End main
 
 function WriteStatblock() {
-    // __txt_private_notes
     var template = "";
 
     // Special cases: Star Wars Saga
@@ -49,30 +54,105 @@ function WriteStatblock() {
     // Some hard-coded values
     template = template.replace("!!URL!!", window.location.href);
 
-    var reSearch = /::(\+?)(\w+)::/g;
-    var fields;
-    var output = template;
-    while ((fields = reSearch.exec(template)) !== null) {
-        // Get the value from the designated field
-        var field = document.getElementsByName(fields[2])[0];
-        if (field == null) {
-            alert(fields[2] + " is undefined!");
-        }
-        var value = field.value;
-        //alert(fields[1]);
-        if (fields[1] == "+") {
-            // Apparently there is no function in Javascript to format a number, so...
-            if (value >= 0) {
-                value = "+" + value;
-            }
-        }
-        output = output.replace(fields[0], value);
-    }
-    
+    var output = statblockParse(template);
+
     if (document.title.includes(":: Star Wars Saga ::")) {
         _sheet.set("__txt_statsummary", output);
     } else {
         // This works for D&D 5E
         _sheet.set("__txt_statblock", output);
+    }
+}
+
+// Parse a value.
+// output - the text to parse. Named output for historical reasons - it's also the output of the function
+// nestlevel - this is to prevent circular references
+function statblockParse(output, nestlevel = 1) {
+    if (nestlevel > 25) {
+        // Safeguard to prevent circular references
+        return "Too much nesting";
+    } else {
+        // Replace fields
+        var reSearch = /::(\+?)(\w+)::/g;
+        var fieldnames;
+        while ((fieldnames = reSearch.exec(output)) !== null) {
+            // Get the value from the designated field
+            var fields = document.getElementsByName(fieldnames[2]);
+            if (fields == null) {
+                alert(fieldnames[2] + " is undefined!");
+            } else {
+                // By default, we're going to take the first field in the list
+                var field = fields[0];
+
+                // Check if we're dealing with a radio button group
+                if (fields[0].type == "radio") {
+                    // Yes, so we'll return the one that is checked
+                    for (let fieldNo = 0; fieldNo < fields.length; fieldNo++) {
+                        if (fields[fieldNo].checked) {
+                            field = fields[fieldNo];
+                        }
+                    }
+                }
+
+                var value = "";
+
+                if (field.type == "checkbox") {
+                    value = (field.checked ? "yes" : "no");
+                } else {
+                    value = statblockParse(field.value, nestlevel + 1);
+                }
+
+                //alert(fields[1]);
+                if (fieldnames[1] == "+") {
+                    // Apparently there is no function in Javascript to format a number, so...
+                    if (value >= 0) {
+                        value = "+" + value;
+                    }
+                }
+                output = output.replace(fieldnames[0], value);
+            }
+
+            // Reset the starting position of the RegEx so that we may retry already replaced text that contains placeholders.
+            reSearch.lastIndex = 0;
+        }
+
+        // Conditional expressions
+        reSearch = /{\?\s*(.*?)\s*([<=>])\s*(.*?)\s*{T}(.*?){F}(.*?)\?}/gs;
+        // 0: entire match
+        // 1: identifier
+        // 2: compare (<, =, or >)
+        // 3: compare to
+        // 4: value if true
+        // 5: value if false
+        var template = output;
+        while ((fields = reSearch.exec(template)) !== null) {
+            value = "";
+
+            switch(fields[2]) {
+                case "<":
+                    if (fields[1] < fields[3]) {
+                        value = fields[4];
+                    } else {
+                        value = fields[5];
+                    }
+                    break;
+                case ">":
+                    if (fields[1] > fields[3]) {
+                        value = fields[4];
+                    } else {
+                        value = fields[5];
+                    }
+                    break;
+                case "=":
+                    if (fields[1] == fields[3]) {
+                        value = fields[4];
+                    } else {
+                        value = fields[5];
+                    }
+                    break;
+            }
+            output = output.replace(fields[0], statblockParse(value, nestlevel + 1));
+        }
+        return output;
     }
 }
