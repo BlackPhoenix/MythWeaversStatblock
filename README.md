@@ -42,6 +42,8 @@ This will not work: {? ::HPCurrent:: = ::HPTotal:: {T}Healthy{F}{? ::HPCurrent::
 
 However, you can reference another field which does contain ::identifiers:: and/or a conditional expression.
 
+Finally, leading and trailing whitespaces in the condition are ignored, but they are kept in the {T} or {F} statements.
+
 **Special tags:**
 !!URL!!       The URL of the character sheet.
 
