@@ -17,11 +17,13 @@ The script currently supports D&D 5e and Star Wars Saga. It might work on other 
 Note that ::identifiers:: are case-sensitive.
 
 **Creating the Template:**
+
 The script replaces strings in the form "::identifier::" by the value of the HTML element using the name "identifier".
 Since HTML does not guarantee that a tag name is unique, we're taking the first one. Writing the template might
 entail looking at the HTML source of the character sheet's page to find which names are used.
 
 **Conditional Expressions:**
+
 It is possible to base output on a condition. For example:
 
 ```
@@ -43,6 +45,18 @@ This will not work: {? ::HPCurrent:: = ::HPTotal:: {T}Healthy{F}{? ::HPCurrent::
 However, you can reference another field which does contain ::identifiers:: and/or a conditional expression.
 
 Finally, leading and trailing whitespaces in the condition are ignored, but they are kept in the {T} or {F} statements.
+
+**Math**
+
+Basic mathematics is supported:
+
+```
+{MATH(::HPTotal:: / 2)}
+```
+
+Extras:
+
+`{MATH.ROUND(::HPTotal:: / 2)}` will round to the nearest integer.
 
 **Special tags:**
 !!URL!!       The URL of the character sheet.
