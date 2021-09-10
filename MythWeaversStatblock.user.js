@@ -116,6 +116,26 @@ function statblockParse(output, nestlevel = 1) {
             reSearch.lastIndex = 0;
         }
 
+        // Do math:
+        // {MATH.extra(expression)}
+        // The ".extra" is optional. Supported are:
+        //  - .round    Round to the nearest integer
+        reSearch = /{MATH(\.\w*)?\((.*?)\)}/gs;
+        var mathParts;
+        while ((mathParts = reSearch.exec(output)) != null) {
+            value = math.evaluate(mathParts[2]);
+
+            if(mathParts[1]) {
+                switch(mathParts[1].toUpperCase()) {
+                    case ".ROUND":
+                        value = math.round(value, 0);
+                        break;
+                }
+            }
+
+            output = output.replace(mathParts[0], value);
+        }
+
         // Conditional expressions
         reSearch = /{\?\s*(.*?)\s*([<=>])\s*(.*?)\s*{T}(.*?){F}(.*?)\?}/gs;
         // 0: entire match
