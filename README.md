@@ -12,10 +12,51 @@ you to generate the statblock before saving your character.
 If your character sheet is attached to the game you're playing, you can use the statblock tag (such as ``[sb=free][/sb]``)
 to insert the contents into your posts.
 
+The script currently supports D&D 5e and Star Wars Saga. It might work on other sheets, if those sheets use the same private text and statblock HTML field names as D&D 5e.
+
+Note that ::identifiers:: are case-sensitive.
+
 **Creating the Template:**
+
 The script replaces strings in the form "::identifier::" by the value of the HTML element using the name "identifier".
 Since HTML does not guarantee that a tag name is unique, we're taking the first one. Writing the template might
 entail looking at the HTML source of the character sheet's page to find which names are used.
+
+**Conditional Expressions:**
+
+It is possible to base output on a condition. For example:
+
+```
+{? ::HPCurrent:: = ::HPTotal:: {T}[color=green]::HPCurrent::[/color]{F}[color=yellow]::HPCurrent::[/color]?}
+```
+
+**{?** starts the expression, while **?}** ends it.
+As can be seen above, you can use ::identifiers:: in the expression to refer to other fields.
+The condition compare symbol can be **=** (as in the example), **<**, or **>**.
+**{T}** indicates what to return if the expression is true.
+**{F}** indicates what to return if the expression is false.
+
+Note that you _cannot_ nest conditional expressions:
+
+```
+This will not work: {? ::HPCurrent:: = ::HPTotal:: {T}Healthy{F}{? ::HPCurrent:: = 0 {T}Dead{F}Wounded?}?}
+```
+
+However, you can reference another field which does contain ::identifiers:: and/or a conditional expression.
+
+Finally, leading and trailing whitespaces in the condition are ignored, but they are kept in the {T} or {F} statements.
+
+**Math**
+
+Basic mathematics is supported:
+
+```
+{MATH(::HPTotal:: / 2)}
+```
+
+Extras:
+
+`{MATH.ROUND(::HPTotal:: / 2)}` will round to the nearest integer.
 
 **Special tags:**
 !!URL!!       The URL of the character sheet.
