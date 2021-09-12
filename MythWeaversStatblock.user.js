@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
-// @version      2.0
+// @version      2.1
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
@@ -73,13 +73,13 @@ function statblockParse(output, nestlevel = 1) {
         return "Too much nesting";
     } else {
         // Replace fields
-        var reSearch = /::(\+?)(\w+)::/g;
+        var reSearch = /::(?<sign>\+?)(?<identifier>\w+)::/g;
         var fieldnames;
         while ((fieldnames = reSearch.exec(output)) !== null) {
             // Get the value from the designated field
-            var fields = document.getElementsByName(fieldnames[2]);
+            var fields = document.getElementsByName(fieldnames.groups.identifier);    //fieldnames[2]);
             if (fields == null) {
-                alert(fieldnames[2] + " is undefined!");
+                alert(fieldnames.groups.identifier + " is undefined!");
             } else {
                 // By default, we're going to take the first field in the list
                 var field = fields[0];
@@ -103,7 +103,7 @@ function statblockParse(output, nestlevel = 1) {
                 }
 
                 //alert(fields[1]);
-                if (fieldnames[1] == "+") {
+                if (fieldnames.groups.sign == "+") {
                     // Apparently there is no function in Javascript to format a number, so...
                     if (value >= 0) {
                         value = "+" + value;
@@ -120,13 +120,13 @@ function statblockParse(output, nestlevel = 1) {
         // {MATH.extra(expression)}
         // The ".extra" is optional. Supported are:
         //  - .round    Round to the nearest integer
-        reSearch = /{MATH(\.\w*)?\((.*?)\)}/gs;
+        reSearch = /{MATH(?<extra>\.\w*)?\((?<expression>.*?)\)}/gs;
         var mathParts;
         while ((mathParts = reSearch.exec(output)) != null) {
-            value = math.evaluate(mathParts[2]);
+            value = math.evaluate(mathParts.groups.expression);
 
-            if(mathParts[1]) {
-                switch(mathParts[1].toUpperCase()) {
+            if(mathParts.groups.extra) {
+                switch(mathParts.groups.extra.toUpperCase()) {
                     case ".ROUND":
                         value = math.round(value, 0);
                         break;
@@ -137,7 +137,7 @@ function statblockParse(output, nestlevel = 1) {
         }
 
         // Conditional expressions
-        reSearch = /{\?\s*(.*?)\s*([<=>])\s*(.*?)\s*{T}(.*?){F}(.*?)\?}/gs;
+        reSearch = /{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}/gs;
         // 0: entire match
         // 1: identifier
         // 2: compare (<, =, or >)
@@ -148,26 +148,26 @@ function statblockParse(output, nestlevel = 1) {
         while ((fields = reSearch.exec(template)) !== null) {
             value = "";
 
-            switch(fields[2]) {
+            switch(fields.groups.comparesign) {
                 case "<":
-                    if (fields[1] < fields[3]) {
-                        value = fields[4];
+                    if (fields.groups.expleft < fields.groups.expright) {
+                        value = fields.groups.iftrue;
                     } else {
-                        value = fields[5];
+                        value = fields.groups.iffalse;
                     }
                     break;
                 case ">":
-                    if (fields[1] > fields[3]) {
-                        value = fields[4];
+                    if (fields.groups.expleft > fields.groups.expright) {
+                        value = fields.groups.iftrue;
                     } else {
-                        value = fields[5];
+                        value = fields.groups.iffalse;
                     }
                     break;
                 case "=":
-                    if (fields[1] == fields[3]) {
-                        value = fields[4];
+                    if (fields.groups.expleft == fields.groups.expright) {
+                        value = fields.groups.iftrue;
                     } else {
-                        value = fields[5];
+                        value = fields.groups.iffalse;
                     }
                     break;
             }
