@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
-// @version      2.2
+// @version      2.3
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
@@ -15,11 +15,10 @@
 // on the layout of the page, and therefore will break if Myth-Weaver changes the sheets.
 //
 // It replaces string in the form "::identifier::" by the value of the HTML element using the name "identifier".
-// Since HTML does not guarantee that a tag name is unique, we're taking the first one. A future implementation
-// might allow selecting a different item by the same tag name, such as "::identifier[2]::".
+// Since HTML does not guarantee that a tag name is unique, we're taking the first one.
 //
 // Special tags:
-// !!URL!!       The URL of the character sheet.
+// ::URL::       The URL of the character sheet.
 //
 // conditional:
 // {? something = some value {T} result_true {F} result_false ?}
@@ -33,6 +32,7 @@
 // the content of the character sheet. It needs to be a global variable in order to be readable by all the
 // functions of this script.
 var alias = new Map();
+var privateNotesField = "__txt_private_notes";
 
 // Add a new button "Statblock" to the left of the Save button.
 var sbButtonLI = document.createElement("LI");
@@ -52,7 +52,7 @@ function WriteStatblock() {
     // Universal alias:
     alias.set("URL", window.location.href);
 
-    template = "::__txt_private_notes[?=STATBLOCK]::";
+    template = "::" + privateNotesField + "[?=STATBLOCK]::";
 
     var output = statblockParse(template);
 
@@ -76,9 +76,14 @@ function statblockParse(output, nestlevel = 0) {
         return "Too much nesting";
     } else {
         // Replace fields
-        var reSearch = /::(?<sign>\+?)(?<identifier>\w+)(\[(?<sectionModifiers>[=?]*)(?<section>\w+)\]|="(?<assign>.*?)")?::/gm;
+        var reSearch = /::(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>\w+)\]|="(?<assign>.*?)")?::/gm;
         var fieldnames;
         while ((fieldnames = reSearch.exec(output)) !== null) {
+            // Not giving an identifier will default to __txt_private_notes.
+            // Note: the value ::="something":: will assign "something" to __txt_private_notes.
+            // I have decided to let it slide at this time.
+            if (fieldnames.groups.identifier == "") { fieldnames.groups.identifier = privateNotesField; }
+
             // Are we dealing with an assignment?
             if (fieldnames.groups.assign) {
                 // Yes, we are, so assign the value in the mapping table.
@@ -167,6 +172,12 @@ function statblockParse(output, nestlevel = 0) {
                 switch(mathParts.groups.extra.toUpperCase()) {
                     case ".ROUND":
                         value = math.round(value, 0);
+                        break;
+                    case ".FLOOR":
+                        value = math.floor(value);
+                        break;
+                    case ".CEILING":
+                        value = math.ceil(value);
                         break;
                 }
             }
