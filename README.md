@@ -104,6 +104,48 @@ Although not shown in the output above, the "+" sign will not appear if the valu
 
 So that's the basics! For quite a long time, this was all I needed!
 
+### Conditional Expressions
+
+It's also possible for the output to change, depending on some condition. Getting back to our example, we'll strip everything except hit points. We want the current hp to appear without formatting if we're at full health, but be orange when we are wounded. Here is the code, with explanations following:
+
+```
+[b]hp:[/b] {? ::hp:: = ::max_hp:: {T}::hp::{F}[color=orange]::hp::[/color]?}
+```
+
+The format of the conditional expressions is **{?** somevalue = othervalue **{T}** output this if true **{F}** output this if false **?}**. The comparaison can be = (as in the example), <, or >. Leading and trailing spaces around each expression being evaluated are ignored in the evaluation. The entire expression, as expected, will be replaced by what comes after the **{T}** or **{F}** statement, depending if the result is true or false.
+
+The True and False part can be empty if needed, but the **{T}** and **{F}** must be there. Leading and trailing spaces are kept in those sections. Note that it is not possible to nest conditional statements directly; nesting will require repurposing another field in the character sheet, or using sections (see below).
+
+### Mathematics
+
+Some mathematics is possible, thanks to the mathjs library. The basic form is this:
+
+```
+{MATH(::max_hp:: / 2)}
+```
+
+This would return the maximum hp value divided by 2. Revisiting our hp example, let's say we want the current hp to appear red when below 1/4 of the maximum hp value:
+
+```
+[b]hp:[/b] {? ::hp:: < {MATH(::max_hp:: / 4)}{T}[color=red]::hp::[/color]{F}::hp::?}
+```
+
+#### Mathematics Extras
+
+A few extras can be added to the MATH option, in the form ``{MATH.extra( expression )}``:
+
+- **.round** will round the result to the nearest integer;
+- **.floor** will round to the nearest integer that is less than the result (eg: 5.2 -> 5, -3.1 -> -4);
+- **.ceiling** will round to the nearest integer that is more than the result (eg: 5.2 -> 6, -3.1 -> -3).
+
+``{MATH.round(3.2)} is equal to 3``
+
+### Sections
+
+Using ``::identifier::`` will return the entire content of the field, which is probably what you want for fields that contain a single value, such as hp, Strength, character's name or skill modifier. For larger fields, such as _Features & Traits_, _Other Notes_, or _Private Notes_, you might want to extract only a portion, leaving the rest of the field for other uses, or to work around the nesting restriction mentioned in the conditional expressions, above.
+
+### Aliases
+
 # To be continued...
 
 **Creating the Template:**
