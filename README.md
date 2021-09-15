@@ -16,6 +16,96 @@ The script currently supports D&D 5e and Star Wars Saga. It might work on other 
 
 Note that ::identifiers:: are case-sensitive.
 
+**You're Using Regular Expressions!?!?!**
+
+Yes, I know, this is not the correct way to write a parser. However:
+- I have no experience writing a parser;
+- I have little experience with Javascript;
+- I wanted something quick as a proof-of-concept;
+- My need was simple (at first).
+
+For a while, all I needed was to plug in field values; there was no need to rewrite something that was already working. By the time I figured out what more I needed, [Project Baldr](https://www.myth-weavers.com/showthread.php?t=523231) was announced. Baldr is likely to make this script obsolete, so, again, not worth the effort of rewriting this - it's for a hobby, not a paying contract.
+
+## Walkthrough
+
+I will be using [this D&D 5e character](https://www.myth-weavers.com/sheet.html#id=2045588) for this walkthrough. Let's start simple: I want a statblock that will show only the character's current hit points. In Chrome, right-clicking on the sheet's hp box, then selecting *inspect* reveals that the name of the box is ``hp``. Therefore, the script will replace ``::hp::`` with the value from this box:
+
+``hp: ::hp::``
+
+This creates the follwing into the statblock field, using the new blue button on the upper-right corner of the page (next to the save button):
+
+``hp: 39``
+
+Excellent! Changing the hp in the hp box and regenerating the statblock will update the statblock field with the new value. Let's fill in a bit more information: the character's name and total HP. We can add vbCode as well, such as making the headers bold:
+
+```
+::name::
+[b]hp:[/b] ::hp:: / ::max_hp::
+```
+
+The output becomes:
+
+```
+Senial Lianodel
+[b]hp:[/b] 39 / 100
+```
+
+### Character Sheet's URL
+
+Let's add a link to the character sheet. There is no field with that information, but the script provides the ``::URL::`` tag with that value:
+
+```
+::name:: - [size=1][url=::URL::]sheet[/url][/size]
+[b]hp:[/b] ::hp:: / ::max_hp::
+```
+
+Output:
+
+```
+Senial Lianodel - [size=1][url=https://www.myth-weavers.com/sheet.html#id=2045588]sheet[/url][/size]
+[b]hp:[/b] 39 / 100
+```
+
+### Formatting
+
+Let's add a bit more information, such as the ability scores and their modifiers:
+
+```
+::name:: - [size=1][url=::URL::]sheet[/url][/size]
+[b]hp:[/b] ::hp:: / ::max_hp::
+[b]Abilities:[/b] STR ::strength:: (::strength_mod::), DEX ::dexterity:: (::dexterity_mod::), CON ::constitution:: (::constitution_mod::), INT ::intelligence:: (::intelligence_mod::), WIS ::wisdom:: (::wisdom_mod::), CHA ::charisma:: (::charisma_mod::)
+```
+
+Output:
+
+```
+Senial Lianodel - [size=1][url=https://www.myth-weavers.com/sheet.html#id=2045588]sheet[/url][/size]
+[b]hp:[/b] 39 / 100
+[b]Abilities:[/b] STR 10 (0), DEX 20 (5), CON 12 (1), INT 10 (0), WIS 20 (5), CHA 10 (0)
+```
+
+Oh wait?! Why don't the modifier have a "+" in front of them? It turns out that the "+" in the character sheet is not part of the value. We can fix this by putting the "+" sign at the start of the identifier names:
+
+```
+::name:: - [size=1][url=::URL::]sheet[/url][/size]
+[b]hp:[/b] ::hp:: / ::max_hp::
+[b]Abilities:[/b] STR ::strength:: (::+strength_mod::), DEX ::dexterity:: (::+dexterity_mod::), CON ::constitution:: (::+constitution_mod::), INT ::intelligence:: (::+intelligence_mod::), WIS ::wisdom:: (::+wisdom_mod::), CHA ::charisma:: (::+charisma_mod::)
+```
+
+Output:
+
+```
+Senial Lianodel - [size=1][url=https://www.myth-weavers.com/sheet.html#id=2045588]sheet[/url][/size]
+[b]hp:[/b] 39 / 100
+[b]Abilities:[/b] STR 10 (+0), DEX 20 (+5), CON 12 (+1), INT 10 (+0), WIS 20 (+5), CHA 10 (+0)
+```
+
+Although not shown in the output above, the "+" sign will not appear if the value is negative (or not a number).
+
+So that's the basics! For quite a long time, this was all I needed!
+
+# To be continued...
+
 **Creating the Template:**
 
 The script replaces strings in the form "::identifier::" by the value of the HTML element using the name "identifier".
