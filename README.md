@@ -138,7 +138,11 @@ A few extras can be added to the MATH option, in the form ``{MATH.extra( express
 - **.floor** will round to the nearest integer that is less than the result (eg: 5.2 -> 5, -3.1 -> -4);
 - **.ceiling** will round to the nearest integer that is more than the result (eg: 5.2 -> 6, -3.1 -> -3).
 
-``{MATH.round(3.2)} is equal to 3``
+```
+{MATH.round(3.2)} is equal to 3
+{MATH.floor(3.2)} is equal to 3
+{MATH.ceiling(3.2)} is equal to 4
+```
 
 ### Sections
 
@@ -162,62 +166,51 @@ In our private notes, we would put something like this:
 
 This gets around the nesting restriction, since the WOUNDED section will be resolved before being inserted in the {F} part of the HPDISPLAY section.
 
+The section names do not need to be ALL CAPITALS, just remember that it is case-sensitive. You can use letters, numbers, and the underscore character ``_``, but not spaces. Also, leading and trailing whitespaces will be trimed by default from sections. This default behavior is to make it easier to read and modify. In the example above, if the whitespaces were not removed, there would be an end-of-line both before and after the hp number, like this:
+
+```
+[b]hp:[/b] 
+[color=orange]39[/color]
+```
+
+If, however, you do want to keep those whitespaces, you can prefix the section name with the equal sign: 
+
+``[b]hp:[/b] ::__txt_other_notes[=HPDISPLAY]::``
+
+**Note:** In order to allow the private notes to be used for something else in addition to the statblock code, the code will look for a section called ``STATBLOCK``. If that section is not found, the entire private notes will be used to generate the statblock.
+
+```
+Secret: this character's father is the main villain. The character does not know it at this point.
+
+>>STATBLOCK>>
+::name:: - [size=1][url=::URL::]sheet[/url][/size]
+[b]hp:[/b] ::hp:: / ::max_hp::
+[b]Abilities:[/b] STR ::strength:: (::+strength_mod::), DEX ::dexterity:: (::+dexterity_mod::), CON ::constitution:: (::+constitution_mod::), INT ::intelligence:: (::+intelligence_mod::), WIS ::wisdom:: (::+wisdom_mod::), CHA ::charisma:: (::+charisma_mod::)
+<<STATBLOCK<<
+```
+
+Lastly, if you want to put multiple sections in the private notes, you can use ``::__txt_private_notes[sectionname]::``, but for convenience, a shortcut also exists: just leave out the identifier entirely! ``::[sectionname]::`` will look for ``sectionname`` in the private notes.
+
 ### Aliases
 
-# To be continued...
+Format: ``::identifier="new value"::``
 
-**Creating the Template:**
-
-The script replaces strings in the form "::identifier::" by the value of the HTML element using the name "identifier".
-Since HTML does not guarantee that a tag name is unique, we're taking the first one. Writing the template might
-entail looking at the HTML source of the character sheet's page to find which names are used.
-
-**Conditional Expressions:**
-
-It is possible to base output on a condition. For example:
+You can define aliases: you define (or redefine) identifiers and assign them another value. This can be used for readability, or to shorten a field you might be using multiple times. The identifier is only valid for what comes *after* the definition.
 
 ```
-{? ::HPCurrent:: = ::HPTotal:: {T}[color=green]::HPCurrent::[/color]{F}[color=yellow]::HPCurrent::[/color]?}
+::hpdisplay="::__txt_other_notes[HPDISPLAY]::"::
+[b]hp:[/b] ::hpdisplay::
 ```
 
-**{?** starts the expression, while **?}** ends it.
-As can be seen above, you can use ::identifiers:: in the expression to refer to other fields.
-The condition compare symbol can be **=** (as in the example), **<**, or **>**.
-**{T}** indicates what to return if the expression is true.
-**{F}** indicates what to return if the expression is false.
+Note that you can redefine the value of existing fields. This does not change the actual value in the character sheet, but the redefined value will be used when generating the statblock.
 
-Note that you _cannot_ nest conditional expressions:
+(Remember that ``::url::`` special tag? It's an alias.)
 
-```
-This will not work: {? ::HPCurrent:: = ::HPTotal:: {T}Healthy{F}{? ::HPCurrent:: = 0 {T}Dead{F}Wounded?}?}
-```
-
-However, you can reference another field which does contain ::identifiers:: and/or a conditional expression.
-
-Finally, leading and trailing whitespaces in the condition are ignored, but they are kept in the {T} or {F} statements.
-
-**Math**
-
-Basic mathematics is supported:
-
-```
-{MATH(::HPTotal:: / 2)}
-```
-
-Extras:
-
-`{MATH.ROUND(::HPTotal:: / 2)}` will round to the nearest integer.
-
-**Special tags:**
-!!URL!!       The URL of the character sheet.
-
-**Formatting:**
-If you want the value to be preceeded with a positive sign (when the value is a positive number), prefix it with a + sign, like this: ``::+dexterity_mod::``.
-
+# Example
 As an example, consider the following template, used on a DnD 5e sheet:
 
 ```
-[floatleft][img2=90]::character_portrait::[/img2][/floatleft][FONT="Palatino Linotype"][SIZE="5"]::name::[/size][size=3] [I](::race:: ::class::)[/I] - [url="!!URL!!"]sheet[/url][/SIZE][/FONT]
+[floatleft][img2=90]::character_portrait::[/img2][/floatleft][FONT="Palatino Linotype"][SIZE="5"]::name::[/size][size=3] [I](::race:: ::class::)[/I] - [url="::URL::"]sheet[/url][/SIZE][/FONT]
 [hr][/hr][B][COLOR="Black"]AC[/COLOR]:[/B] ::armor_class:: | [B][COLOR="black"]HP[/COLOR]:[/B] ::hp:: / [COLOR="darkgreen"]::max_hp:: [/COLOR] [B]THP:[/B] ::temp_hp:: | [B][COLOR="black"]Initiative[/COLOR]:[/B] ::initiative:: | [B][COLOR="black"]Passive Perception[/COLOR]:[/B] ::passive_perception::
 [B][COLOR="black"]Stats[/COLOR]:[/B] STR [ooc=::strength::]Athletics ::athletics_mod::[/ooc] (::+strength_mod::), DEX [ooc=::dexterity::]Acrobatics ::acrobatics_mod::
 Sleight of Hand ::sleight_of_hand_mod::
