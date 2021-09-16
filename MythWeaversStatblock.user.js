@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
-// @version      2.3
+// @version      2.4
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
@@ -166,7 +166,8 @@ function statblockParse(output, nestlevel = 0) {
         reSearch = /{MATH(?<extra>\.\w*)?\((?<expression>.*?)\)}/gs;
         var mathParts;
         while ((mathParts = reSearch.exec(output)) != null) {
-            value = math.evaluate(mathParts.groups.expression);
+            // we'll strip everything that is not a number, a dot (decimal separation), a parenthesis, or an operation (+-*/)
+            value = math.evaluate(mathParts.groups.expression.replace(/[^\d.()+-\/*]/g, ""));
 
             if(mathParts.groups.extra) {
                 switch(mathParts.groups.extra.toUpperCase()) {
