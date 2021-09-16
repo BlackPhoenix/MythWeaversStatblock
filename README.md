@@ -142,7 +142,25 @@ A few extras can be added to the MATH option, in the form ``{MATH.extra( express
 
 ### Sections
 
-Using ``::identifier::`` will return the entire content of the field, which is probably what you want for fields that contain a single value, such as hp, Strength, character's name or skill modifier. For larger fields, such as _Features & Traits_, _Other Notes_, or _Private Notes_, you might want to extract only a portion, leaving the rest of the field for other uses, or to work around the nesting restriction mentioned in the conditional expressions, above.
+Using ``::identifier::`` will return the entire content of the field, which is probably what you want for fields that contain a single value, such as hp, Strength, character's name or skill modifier. For larger fields, such as _Features & Traits_, _Other Notes_, or _Private Notes_, you might want to extract only a portion, leaving the rest of the field for other uses, or to work around the nesting restriction mentioned in the conditional expressions, above. Let's use the "Other Notes" field (the name is ``__txt_other_notes``) to rebuild our hp colors above: black for full health, red for below 1/4 max hp, and orange for wounded (at or above 1/4 max hp). We cannot use nesting directly, so we can use 2 sections:
+
+```
+>>HPDISPLAY>>
+{? ::hp:: = ::max_hp:: {T}::hp::{F}::__txt_other_notes[WOUNDED]::?}
+<<HPDISPLAY<<
+
+>>WOUNDED>>
+{? ::hp:: < {MATH(::max_hp:: / 4)} {T}[color=red]::hp::[/color]{F}[color=orange]::hp::[/color]?}
+<<WOUNDED<<
+```
+
+In our private notes, we would put something like this:
+
+```
+[b]hp:[/b] ::__txt_other_notes[HPDISPLAY]::
+```
+
+This gets around the nesting restriction, since the WOUNDED section will be resolved before being inserted in the {F} part of the HPDISPLAY section.
 
 ### Aliases
 
