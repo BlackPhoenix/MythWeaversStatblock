@@ -16,6 +16,8 @@ The script currently supports D&D 5e and Star Wars Saga. It might work on other 
 
 Note that ::identifiers:: are case-sensitive.
 
+You can [contact me](https://www.myth-weavers.com/private.php?do=newpm&u=16146) on Myth-Weavers if you are having issues with this script.
+
 **You're Using Regular Expressions!?!?!**
 
 Yes, I know, this is not the correct way to write a parser. However:
