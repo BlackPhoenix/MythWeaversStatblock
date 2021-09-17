@@ -16,6 +16,8 @@ The script currently supports D&D 5e and Star Wars Saga. It might work on other 
 
 Note that ::identifiers:: are case-sensitive.
 
+You can [contact me](https://www.myth-weavers.com/private.php?do=newpm&u=16146) on Myth-Weavers if you are having issues with this script.
+
 **You're Using Regular Expressions!?!?!**
 
 Yes, I know, this is not the correct way to write a parser. However:
@@ -118,7 +120,7 @@ The True and False part can be empty if needed, but the **{T}** and **{F}** must
 
 ### Mathematics
 
-Some mathematics is possible, thanks to the mathjs library. The basic form is this:
+Some mathematics is possible. The basic form is this:
 
 ```
 {MATH(::max_hp:: / 2)}
@@ -129,6 +131,8 @@ This would return the maximum hp value divided by 2. Revisiting our hp example, 
 ```
 [b]hp:[/b] {? ::hp:: < {MATH(::max_hp:: / 4)}{T}[color=red]::hp::[/color]{F}::hp::?}
 ```
+
+Optionally, you may use ``{+MATH...`` to put a + sign if the result is a positive number. It should also be noted that anything that isn't a number, a parenthesis, a dot (decimal separator), or a basic math operation (+-/\*) will be ignored. Finally, if the expression is not a valid mathematical expression, the function will return an error message.
 
 #### Mathematics Extras
 
