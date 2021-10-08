@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
-// @version      2.4
+// @version      2.5
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
@@ -75,7 +75,8 @@ function statblockParse(output, nestlevel = 0) {
         return "Too much nesting";
     } else {
         // Replace fields
-        var reSearch = /::(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>\w+)\]|="(?<assign>.*?)")?::/gm;
+        // Whitespaces before (wslead) and after (wstrail) will be removed only on assignments, to make things readable.
+        var reSearch = /(?<wslead>\s*)::(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>\w+)\]|="(?<assign>.*?)")?::(?<wstrail>\s*)/gm;
         var fieldnames;
         while ((fieldnames = reSearch.exec(output)) !== null) {
             // Not giving an identifier will default to __txt_private_notes.
@@ -152,7 +153,12 @@ function statblockParse(output, nestlevel = 0) {
                     }
                 }
             }
+            if (!fieldnames.groups.assign) {
+                value = fieldnames.groups.wslead + value + fieldnames.groups.wstrail;
+            }
+
             output = output.replace(fieldnames[0], value);
+
 
             // Reset the starting position of the RegEx so that we may retry already replaced text that contains placeholders.
             reSearch.lastIndex = 0;
