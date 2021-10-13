@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
-// @version      2.5
+// @version      2.6
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
@@ -214,24 +214,31 @@ function statblockParse(output, nestlevel = 0) {
         var template = output;
         while ((fields = reSearch.exec(template)) !== null) {
             value = "";
+            var leftExp = fields.groups.expleft;
+            var rightExp = fields.groups.expright;
+
+            if (!isNaN(fields.groups.expleft) && !isNaN(fields.groups.expright)) {
+                leftExp = +leftExp;
+                rightExp = +rightExp;
+            }
 
             switch(fields.groups.comparesign) {
                 case "<":
-                    if (fields.groups.expleft < fields.groups.expright) {
+                    if (leftExp < rightExp) {
                         value = fields.groups.iftrue;
                     } else {
                         value = fields.groups.iffalse;
                     }
                     break;
                 case ">":
-                    if (fields.groups.expleft > fields.groups.expright) {
+                    if (leftExp > rightExp) {
                         value = fields.groups.iftrue;
                     } else {
                         value = fields.groups.iffalse;
                     }
                     break;
                 case "=":
-                    if (fields.groups.expleft == fields.groups.expright) {
+                    if (leftExp == rightExp) {
                         value = fields.groups.iftrue;
                     } else {
                         value = fields.groups.iffalse;
