@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
-// @version      2.6
+// @version      2.7
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
@@ -76,7 +76,7 @@ function statblockParse(output, nestlevel = 0) {
     } else {
         // Replace fields
         // Whitespaces before (wslead) and after (wstrail) will be removed only on assignments, to make things readable.
-        var reSearch = /(?<wslead>\s*)::(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>\w+)\]|="(?<assign>.*?)")?::(?<wstrail>\s*)/gm;
+        var reSearch = /(?<wslead>\s*)::(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>\w+)\]|="(?<assign>.*?)"(?<immediate>!?))?::(?<wstrail>\s*)/gm;
         var fieldnames;
         while ((fieldnames = reSearch.exec(output)) !== null) {
             // Not giving an identifier will default to __txt_private_notes.
@@ -87,7 +87,12 @@ function statblockParse(output, nestlevel = 0) {
             // Are we dealing with an assignment?
             if (fieldnames.groups.assign) {
                 // Yes, we are, so assign the value in the mapping table.
-                alias.set(fieldnames.groups.identifier, fieldnames.groups.assign);
+                if (fieldnames.groups.immediate == "!") {
+                    // We are asked to evaluate the value right away
+                    alias.set(fieldnames.groups.identifier, statblockParse(fieldnames.groups.assign));
+                } else {
+                    alias.set(fieldnames.groups.identifier, fieldnames.groups.assign);
+                }
                 // Clear the assigment from the output
                 value = "";
             } else {
