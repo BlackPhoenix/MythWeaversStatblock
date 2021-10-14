@@ -206,7 +206,22 @@ You can define aliases: you define (or redefine) identifiers and assign them ano
 [b]hp:[/b] ::hpdisplay::
 ```
 
-Note that you can redefine the value of existing fields. This does not change the actual value in the character sheet, but the redefined value will be used when generating the statblock.
+Note that you can redefine the value of existing fields. This does not change the actual value in the character sheet, but the redefined value will be used when generating the statblock. Note that the "new value" is just stored as-is, and will be plugged in, and evaluated, when it is actually used. Let's take an example:
+
+```
+::x="1"::
+Value of x is ::x::
+::x="{MATH(::x:: + 1)}"::
+Value of x is ::x::
+```
+
+This will cause an infinite loop. ``x`` gets assigned the value of ``1``, and that value is printed out. Then, ``x`` is redefined to mean ``{MATH(::x:: + 1)}``. On the last line, ``x`` gets evaluated to ``{MATH(::x:: + 1)}``, but the ``x`` in *that* expression also gets evaluated to ``{MATH(::x:: + 1)}``, which also gets evaluated, *ad infinitum*. The solution around this is to use the suffix ``!`` to indicate that we want to evaluate the expression right away:
+
+```
+::x="{MATH(::x:: + 1)}"!::
+```
+
+So before remembering the assignation, ``{MATH(::x:: + 1)}`` will be evaluated. Since, at that point, ``x`` equals 1, the expression will be changed to ``{MATH(1 + 1)}``, then again to ``2``.
 
 (Remember that ``::url::`` special tag? It's an alias.)
 
