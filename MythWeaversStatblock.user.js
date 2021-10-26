@@ -8,6 +8,7 @@
 // @grant        none
 // @supportURL   https://github.com/BlackPhoenix/MythWeaversStatblock/issues
 // @homepageURL  https://github.com/BlackPhoenix/MythWeaversStatblock
+// @icon         https://www.google.com/s2/favicons?domain=myth-weavers.com
 // ==/UserScript==
 //
 // This script uses the "Private Notes" as a template to construct the statblock. It makes a lot of assumption
@@ -95,10 +96,12 @@ function statblockParse(output, nestlevel = 0) {
 
         // - {!-- comment --} will be replaced with an empty string
 
-        var reSearch = /((?<wslead>\s*)::(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>[\w-]+)\]|="(?<assign>.*?)"(?<immediate>!?))?::(?<wstrail>\s*)|{(?<mathsign>\+?)(?<math>MATH)(?<extra>\.\w*)?\((?<expression>.*?)\)}|{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}|{!--(?<comment>.*?)--})/gm
+        // - {wd("Tenser's Floating Disk")} to turn string into a string used in Wikidot's URLs
+
+        var reSearch = /((?<wslead>\s*)::(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>[\w-]+)\]|="(?<assign>.*?)"(?<immediate>!?))?::(?<wstrail>\s*)|{(?<mathsign>\+?)(?<math>MATH)(?<extra>\.\w*)?\((?<expression>.*?)\)}|{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}|{!--(?<comment>.*?)--}|{wd\("(?<wikidot>.*?)"\)})/gms
         if (secondPass) {
             // On the second pass, we will catch identifiers or assignments that start with "?", such as ::?identifier[section]::
-            reSearch = /((?<wslead>\s*)::\??(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>[\w-]+)\]|="(?<assign>.*?)"(?<immediate>!?))?::(?<wstrail>\s*)|{(?<mathsign>\+?)(?<math>MATH)(?<extra>\.\w*)?\((?<expression>.*?)\)}|{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}|{!--(?<comment>.*?)--})/gm
+            reSearch = /((?<wslead>\s*)::\??(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>[\w-]+)\]|="(?<assign>.*?)"(?<immediate>!?))?::(?<wstrail>\s*)|{(?<mathsign>\+?)(?<math>MATH)(?<extra>\.\w*)?\((?<expression>.*?)\)}|{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}|{!--(?<comment>.*?)--}|{wd\("(?<wikidot>.*?)"\)})/gms
         }
         var fieldnames;
         while ((fieldnames = reSearch.exec(output)) !== null) {
@@ -111,6 +114,12 @@ function statblockParse(output, nestlevel = 0) {
                 value = parseCondition(fieldnames, nestlevel);
             } else if (fieldnames.groups.comment) {
                 value = "";
+            } else if (fieldnames.groups.wikidot) {
+                value = statblockParse(fieldnames.groups.wikidot)
+                  .toLowerCase()
+                  .replaceAll(" ", "-")
+                  .replaceAll("'", "")
+                  .replaceAll(":", "")
             }
             output = output.replace(fieldnames[0], value);
 
@@ -129,7 +138,7 @@ function parseIdentifier(reGroups, nestlevel = 1) {
     if (reGroups.groups.identifier == "") { reGroups.groups.identifier = privateNotesField; }
 
     // Are we dealing with an assignment?
-    if (reGroups.groups.assign) {
+    if (reGroups.groups.assign != null) {
         // Yes, we are, so assign the value in the mapping table.
         if (reGroups.groups.immediate == "!") {
             // We are asked to evaluate the value right away
@@ -155,49 +164,53 @@ function parseIdentifier(reGroups, nestlevel = 1) {
                 // By default, we're going to take the first field in the list
                 var field = fields[0];
 
-                // Check if we're dealing with a radio button group
-                if (fields[0].type == "radio") {
-                    // Yes, so we'll return the one that is checked
-                    for (let fieldNo = 0; fieldNo < fields.length; fieldNo++) {
-                        if (fields[fieldNo].checked) {
-                            field = fields[fieldNo];
+                if (fields[0]) {
+                    // Check if we're dealing with a radio button group
+                    if (fields[0].type == "radio") {
+                        // Yes, so we'll return the one that is checked
+                        for (let fieldNo = 0; fieldNo < fields.length; fieldNo++) {
+                            if (fields[fieldNo].checked) {
+                                field = fields[fieldNo];
+                            }
                         }
                     }
-                }
 
-                var value = "";
+                    var value = "";
 
-                if (field.type == "checkbox") {
-                    value = (field.checked ? "yes" : "no");
-                } else {
-                    // Check if we're looking at a section
-                    if (reGroups.groups.section) {
-                        var sectionRegEx = new RegExp('>>' + reGroups.groups.section + '>>(.*?)<<' + reGroups.groups.section + '<<', 'gms');
-                        var sectionValues = sectionRegEx.exec(field.value);
-                        if (sectionValues) {
-                            value = sectionValues[1]; // There is only one group, no need to name it
-                        } else if (reGroups.groups.sectionModifiers.includes("?")) {
-                            // Section was optional
-                            value = field.value;
-                        }
-
-                        // Remove leading and trailing whitespace, unless user asked for exact content via the "=" sign
-                        if (!reGroups.groups.sectionModifiers.includes("=")) {
-                            value = value.trim();
-                        }
-
-                        value = statblockParse(value, nestlevel + 1);
+                    if (field.type == "checkbox") {
+                        value = (field.checked ? "yes" : "no");
                     } else {
-                        value = statblockParse(field.value, nestlevel + 1);
-                    }
-                }
+                        // Check if we're looking at a section
+                        if (reGroups.groups.section) {
+                            var sectionRegEx = new RegExp('>>' + reGroups.groups.section + '>>(.*?)<<' + reGroups.groups.section + '<<', 'gms');
+                            var sectionValues = sectionRegEx.exec(field.value);
+                            if (sectionValues) {
+                                value = sectionValues[1]; // There is only one group, no need to name it
+                            } else if (reGroups.groups.sectionModifiers.includes("?")) {
+                                // Section was optional
+                                value = field.value;
+                            }
 
-                //alert(fields[1]);
-                if (reGroups.groups.sign == "+") {
-                    // Apparently there is no function in Javascript to format a number, so...
-                    if (value >= 0) {
-                        value = "+" + value;
+                            // Remove leading and trailing whitespace, unless user asked for exact content via the "=" sign
+                            if (!reGroups.groups.sectionModifiers.includes("=")) {
+                                value = value.trim();
+                            }
+
+                            value = statblockParse(value, nestlevel + 1);
+                        } else {
+                            value = statblockParse(field.value, nestlevel + 1);
+                        }
                     }
+
+                    //alert(fields[1]);
+                    if (reGroups.groups.sign == "+") {
+                        // Apparently there is no function in Javascript to format a number, so...
+                        if (value >= 0) {
+                            value = "+" + value;
+                        }
+                    }
+                } else {
+                    value = `Unknown field ${reGroups.groups.identifier}`;
                 }
             }
         }
@@ -258,7 +271,7 @@ function parseCondition(reGroups, nestlevel = 1) {
     var rightExp = statblockParse(reGroups.groups.expright, nestlevel + 1);
 
     // Convert left and right to numbers if both can be converted, because 4 < 12, but "4" > "12".
-    if (!isNaN(leftExp) && !isNaN(rightExp)) {
+    if (leftExp > "" && rightExp > "" && !isNaN(leftExp) && !isNaN(rightExp)) {
         leftExp = +leftExp;
         rightExp = +rightExp;
     }
