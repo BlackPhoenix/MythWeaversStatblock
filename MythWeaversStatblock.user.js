@@ -1,13 +1,14 @@
 // ==UserScript==
 // @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
-// @version      2.7
+// @version      3.0
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
 // @grant        none
 // @supportURL   https://github.com/BlackPhoenix/MythWeaversStatblock/issues
 // @homepageURL  https://github.com/BlackPhoenix/MythWeaversStatblock
+// @icon         https://www.google.com/s2/favicons?domain=myth-weavers.com
 // ==/UserScript==
 //
 // This script uses the "Private Notes" as a template to construct the statblock. It makes a lot of assumption
@@ -32,6 +33,7 @@
 // functions of this script.
 var alias = new Map();
 var privateNotesField = "__txt_private_notes";
+var secondPass = false;
 
 // Add a new button "Statblock" to the left of the Save button.
 var sbButtonLI = document.createElement("LI");
@@ -47,6 +49,7 @@ sheetControls.insertBefore(sbButtonLI, sheetControls.childNodes[0]);
 
 function WriteStatblock() {
     var template = "";
+    secondPass = false;
 
     // Universal alias:
     alias.set("URL", window.location.href);
@@ -54,6 +57,8 @@ function WriteStatblock() {
     template = "::" + privateNotesField + "[?=STATBLOCK]::";
 
     var output = statblockParse(template);
+    secondPass = true;
+    output = statblockParse(output);
 
     if (document.title.includes(":: Star Wars Saga ::")) {
         _sheet.set("__txt_statsummary", output);
@@ -74,185 +79,225 @@ function statblockParse(output, nestlevel = 0) {
         // Safeguard to prevent circular references
         return "Too much nesting";
     } else {
-        // Replace fields
-        // Whitespaces before (wslead) and after (wstrail) will be removed only on assignments, to make things readable.
-        var reSearch = /(?<wslead>\s*)::(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>\w+)\]|="(?<assign>.*?)"(?<immediate>!?))?::(?<wstrail>\s*)/gm;
+        // The Regular Expression started simple, but feature creep made it look scary. It actually looks for different possibilities:
+        // - ::identifier::
+        //   - optional leading +
+        //   - optional trailing [section]
+        //     - optional leading = to prevent whitespace triming
+        //   - optional ="assignment"
+        //     - Whitespaces before (wslead) and after (wstrail) will be removed only on assignments, to make things readable.
+        //     - optional trailing ! for immediate evaluation
+
+        // - {MATH(expression)}
+        //   - optional leading +
+        //   - optional extra, as in MATH.round
+
+        // - {? condition {T}true{F}false?}
+
+        // - {!-- comment --} will be replaced with an empty string
+
+        // - {wd("Tenser's Floating Disk")} to turn string into a string used in Wikidot's URLs
+
+        var reSearch = /((?<wslead>\s*)::(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>[\w-]+)\]|="(?<assign>.*?)"(?<immediate>!?))?::(?<wstrail>\s*)|{(?<mathsign>\+?)(?<math>MATH)(?<extra>\.\w*)?\((?<expression>.*?)\)}|{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}|{!--(?<comment>.*?)--}|{wd\("(?<wikidot>.*?)"\)})/gms
+        if (secondPass) {
+            // On the second pass, we will catch identifiers or assignments that start with "?", such as ::?identifier[section]::
+            reSearch = /((?<wslead>\s*)::\??(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>[\w-]+)\]|="(?<assign>.*?)"(?<immediate>!?))?::(?<wstrail>\s*)|{(?<mathsign>\+?)(?<math>MATH)(?<extra>\.\w*)?\((?<expression>.*?)\)}|{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}|{!--(?<comment>.*?)--}|{wd\("(?<wikidot>.*?)"\)})/gms
+        }
         var fieldnames;
         while ((fieldnames = reSearch.exec(output)) !== null) {
-            // Not giving an identifier will default to __txt_private_notes.
-            // Note: the value ::="something":: will assign "something" to __txt_private_notes.
-            // I have decided to let it slide at this time.
-            if (fieldnames.groups.identifier == "") { fieldnames.groups.identifier = privateNotesField; }
-
-            // Are we dealing with an assignment?
-            if (fieldnames.groups.assign) {
-                // Yes, we are, so assign the value in the mapping table.
-                if (fieldnames.groups.immediate == "!") {
-                    // We are asked to evaluate the value right away
-                    alias.set(fieldnames.groups.identifier, statblockParse(fieldnames.groups.assign));
-                } else {
-                    alias.set(fieldnames.groups.identifier, fieldnames.groups.assign);
-                }
-                // Clear the assigment from the output
+            var value = "";
+            if (fieldnames.groups.identifier != null) {
+                value = parseIdentifier(fieldnames, nestlevel);
+            } else if (fieldnames.groups.math) {
+                value = parseMath(fieldnames, nestlevel);
+            } else if (fieldnames.groups.comparesign) {
+                value = parseCondition(fieldnames, nestlevel);
+            } else if (fieldnames.groups.comment) {
                 value = "";
-            } else {
-                // No, we're not dealing with an assignment, so proceed as usual.
-
-                // Do we have that identifier in the alias mapping?
-                if (alias.has(fieldnames.groups.identifier)) {
-                    // Identifier does exist in alias, replace with value
-                    value = statblockParse(alias.get(fieldnames.groups.identifier), nestlevel + 1);
-                } else {
-                    // Not in the mapping table, get the field from the character sheet.
-                    var fields = document.getElementsByName(fieldnames.groups.identifier);
-                    if (fields == null) {
-                        value = fieldnames.groups.identifier + " is undefined!";
-                    } else {
-                        // By default, we're going to take the first field in the list
-                        var field = fields[0];
-
-                        // Check if we're dealing with a radio button group
-                        if (fields[0].type == "radio") {
-                            // Yes, so we'll return the one that is checked
-                            for (let fieldNo = 0; fieldNo < fields.length; fieldNo++) {
-                                if (fields[fieldNo].checked) {
-                                    field = fields[fieldNo];
-                                }
-                            }
-                        }
-
-                        var value = "";
-
-                        if (field.type == "checkbox") {
-                            value = (field.checked ? "yes" : "no");
-                        } else {
-                            // Check if we're looking at a section
-                            if (fieldnames.groups.section) {
-                                var sectionRegEx = new RegExp('>>' + fieldnames.groups.section + '>>(.*?)<<' + fieldnames.groups.section + '<<', 'gms');
-                                var sectionValues = sectionRegEx.exec(field.value);
-                                if (sectionValues) {
-                                    value = sectionValues[1]; // There is only one group, no need to name it
-                                } else if (fieldnames.groups.sectionModifiers.includes("?")) {
-                                    // Section was optional
-                                    value = field.value;
-                                }
-
-                                // Remove leading and trailing whitespace, unless user asked for exact content via the "=" sign
-                                if (!fieldnames.groups.sectionModifiers.includes("=")) {
-                                    value = value.trim();
-                                }
-
-                                value = statblockParse(value, nestlevel + 1);
-                            } else {
-                                value = statblockParse(field.value, nestlevel + 1);
-                            }
-                        }
-
-                        //alert(fields[1]);
-                        if (fieldnames.groups.sign == "+") {
-                            // Apparently there is no function in Javascript to format a number, so...
-                            if (value >= 0) {
-                                value = "+" + value;
-                            }
-                        }
-                    }
-                }
+            } else if (fieldnames.groups.wikidot) {
+                value = statblockParse(fieldnames.groups.wikidot)
+                  .toLowerCase()
+                  .replaceAll(" ", "-")
+                  .replaceAll("'", "")
+                  .replaceAll(":", "")
             }
-            if (!fieldnames.groups.assign) {
-                value = fieldnames.groups.wslead + value + fieldnames.groups.wstrail;
-            }
-
             output = output.replace(fieldnames[0], value);
-
 
             // Reset the starting position of the RegEx so that we may retry already replaced text that contains placeholders.
             reSearch.lastIndex = 0;
         }
 
-        // Do math:
-        // {MATH.extra(expression)}
-        // The ".extra" is optional. Supported are:
-        //  - .round    Round to the nearest integer
-        //  - .floor    Round to the nearest lower integer
-        //  - .cleiling Round to the nearest higher integer
-        reSearch = /{(?<sign>\+?)MATH(?<extra>\.\w*)?\((?<expression>.*?)\)}/gs;
-        var mathParts;
-        while ((mathParts = reSearch.exec(output)) != null) {
-            // we'll strip everything that is not a number, a dot (decimal separation), a parenthesis, or an operation (+-*/). Or a comma (apparently that's valid in \d).
-            var sanitizedExp = mathParts.groups.expression.replace(/[^\d.()+-\/*]|,/g, "");
-            try {
-                value = Function("return (" + sanitizedExp + ");")();
-            } catch {
-                value = "(Expression \"" + sanitizedExp + "\" is not valid)";
-            }
-
-            if(mathParts.groups.extra) {
-                switch(mathParts.groups.extra.toUpperCase()) {
-                    case ".ROUND":
-                        value = Math.round(value, 0);
-                        break;
-                    case ".FLOOR":
-                        value = Math.floor(value);
-                        break;
-                    case ".CEILING":
-                        value = Math.ceil(value);
-                        break;
-                }
-            }
-
-            if(mathParts.groups.sign == "+" && value >= 0) {
-                value = "+" + value;
-            }
-
-            output = output.replace(mathParts[0], value);
-            reSearch.lastIndex = 0;
-        }
-
-        // Conditional expressions
-        reSearch = /{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}/gs;
-        // 0: entire match
-        // 1: identifier
-        // 2: compare (<, =, or >)
-        // 3: compare to
-        // 4: value if true
-        // 5: value if false
-        var template = output;
-        while ((fields = reSearch.exec(template)) !== null) {
-            value = "";
-            var leftExp = fields.groups.expleft;
-            var rightExp = fields.groups.expright;
-
-            if (!isNaN(fields.groups.expleft) && !isNaN(fields.groups.expright)) {
-                leftExp = +leftExp;
-                rightExp = +rightExp;
-            }
-
-            switch(fields.groups.comparesign) {
-                case "<":
-                    if (leftExp < rightExp) {
-                        value = fields.groups.iftrue;
-                    } else {
-                        value = fields.groups.iffalse;
-                    }
-                    break;
-                case ">":
-                    if (leftExp > rightExp) {
-                        value = fields.groups.iftrue;
-                    } else {
-                        value = fields.groups.iffalse;
-                    }
-                    break;
-                case "=":
-                    if (leftExp == rightExp) {
-                        value = fields.groups.iftrue;
-                    } else {
-                        value = fields.groups.iffalse;
-                    }
-                    break;
-            }
-            output = output.replace(fields[0], statblockParse(value, nestlevel + 1));
-            //reSearch.lastIndex = 0;
-        }
         return output;
     }
+}
+
+function parseIdentifier(reGroups, nestlevel = 1) {
+    // Not giving an identifier will default to __txt_private_notes.
+    // Note: the value ::="something":: will assign "something" to __txt_private_notes.
+    // I have decided to let it slide at this time.
+    if (reGroups.groups.identifier == "") { reGroups.groups.identifier = privateNotesField; }
+
+    // Are we dealing with an assignment?
+    if (reGroups.groups.assign != null) {
+        // Yes, we are, so assign the value in the mapping table.
+        if (reGroups.groups.immediate == "!") {
+            // We are asked to evaluate the value right away
+            alias.set(reGroups.groups.identifier, statblockParse(reGroups.groups.assign));
+        } else {
+            alias.set(reGroups.groups.identifier, reGroups.groups.assign);
+        }
+        // Clear the assigment from the output
+        value = "";
+    } else {
+        // No, we're not dealing with an assignment, so proceed as usual.
+
+        // Do we have that identifier in the alias mapping?
+        if (alias.has(reGroups.groups.identifier)) {
+            // Identifier does exist in alias, replace with value
+            value = statblockParse(alias.get(reGroups.groups.identifier), nestlevel + 1);
+        } else {
+            // Not in the mapping table, get the field from the character sheet.
+            var fields = document.getElementsByName(reGroups.groups.identifier);
+            if (fields == null) {
+                value = reGroups.groups.identifier + " is undefined!";
+            } else {
+                // By default, we're going to take the first field in the list
+                var field = fields[0];
+
+                if (fields[0]) {
+                    // Check if we're dealing with a radio button group
+                    if (fields[0].type == "radio") {
+                        // Yes, so we'll return the one that is checked
+                        for (let fieldNo = 0; fieldNo < fields.length; fieldNo++) {
+                            if (fields[fieldNo].checked) {
+                                field = fields[fieldNo];
+                            }
+                        }
+                    }
+
+                    var value = "";
+
+                    if (field.type == "checkbox") {
+                        value = (field.checked ? "yes" : "no");
+                    } else {
+                        // Check if we're looking at a section
+                        if (reGroups.groups.section) {
+                            var sectionRegEx = new RegExp('>>' + reGroups.groups.section + '>>(.*?)<<' + reGroups.groups.section + '<<', 'gms');
+                            var sectionValues = sectionRegEx.exec(field.value);
+                            if (sectionValues) {
+                                value = sectionValues[1]; // There is only one group, no need to name it
+                            } else if (reGroups.groups.sectionModifiers.includes("?")) {
+                                // Section was optional
+                                value = field.value;
+                            }
+
+                            // Remove leading and trailing whitespace, unless user asked for exact content via the "=" sign
+                            if (!reGroups.groups.sectionModifiers.includes("=")) {
+                                value = value.trim();
+                            }
+
+                            value = statblockParse(value, nestlevel + 1);
+                        } else {
+                            value = statblockParse(field.value, nestlevel + 1);
+                        }
+                    }
+
+                    //alert(fields[1]);
+                    if (reGroups.groups.sign == "+") {
+                        // Apparently there is no function in Javascript to format a number, so...
+                        if (value >= 0) {
+                            value = "+" + value;
+                        }
+                    }
+                } else {
+                    value = `Unknown field ${reGroups.groups.identifier}`;
+                }
+            }
+        }
+    }
+    if (!reGroups.groups.assign) {
+        value = reGroups.groups.wslead + value + reGroups.groups.wstrail;
+    }
+    return value;
+}
+
+function parseMath(reGroups, nestlevel = 1) {
+    // Do math:
+    // {MATH.extra(expression)}
+    // The ".extra" is optional. Supported are:
+    //  - .round    Round to the nearest integer
+    //  - .floor    Round to the nearest lower integer
+    //  - .cleiling Round to the nearest higher integer
+    // we'll strip everything that is not a number, a dot (decimal separation), a parenthesis, or an operation (+-*/). Or a comma (apparently that's valid in \d).
+    var value = "";
+    var sanitizedExp = statblockParse(reGroups.groups.expression, nestlevel + 1).replace(/[^\d.()+-\/*]|,/g, "");
+    try {
+        value = Function("return (" + sanitizedExp + ");")();
+    } catch {
+        value = "(Expression \"" + sanitizedExp + "\" is not valid)";
+    }
+
+    if(reGroups.groups.extra) {
+        switch(reGroups.groups.extra.toUpperCase()) {
+            case ".ROUND":
+                value = Math.round(value, 0);
+                break;
+            case ".FLOOR":
+                value = Math.floor(value);
+                break;
+            case ".CEILING":
+                value = Math.ceil(value);
+                break;
+        }
+    }
+
+    if(reGroups.groups.sign == "+" && value >= 0) {
+        value = "+" + value;
+    }
+    return value;
+}
+
+function parseCondition(reGroups, nestlevel = 1) {
+    // Conditional expressions
+    //reSearch = /{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}/gs;
+    // 0: entire match
+    // 1: identifier
+    // 2: compare (<, =, or >)
+    // 3: compare to
+    // 4: value if true
+    // 5: value if false
+    var value = "";
+    var leftExp = statblockParse(reGroups.groups.expleft, nestlevel + 1);
+    var rightExp = statblockParse(reGroups.groups.expright, nestlevel + 1);
+
+    // Convert left and right to numbers if both can be converted, because 4 < 12, but "4" > "12".
+    if (leftExp > "" && rightExp > "" && !isNaN(leftExp) && !isNaN(rightExp)) {
+        leftExp = +leftExp;
+        rightExp = +rightExp;
+    }
+
+    switch(reGroups.groups.comparesign) {
+        case "<":
+            if (leftExp < rightExp) {
+                value = reGroups.groups.iftrue;
+            } else {
+                value = reGroups.groups.iffalse;
+            }
+            break;
+        case ">":
+            if (leftExp > rightExp) {
+                value = reGroups.groups.iftrue;
+            } else {
+                value = reGroups.groups.iffalse;
+            }
+            break;
+        case "=":
+            if (leftExp == rightExp) {
+                value = reGroups.groups.iftrue;
+            } else {
+                value = reGroups.groups.iffalse;
+            }
+            break;
+    }
+    return statblockParse(value, nestlevel + 1);
 }
