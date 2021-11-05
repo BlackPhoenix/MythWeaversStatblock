@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers statblock
 // @namespace    http://tampermonkey.net/
-// @version      3.0
+// @version      3.1
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
@@ -251,7 +251,7 @@ function parseMath(reGroups, nestlevel = 1) {
         }
     }
 
-    if(reGroups.groups.sign == "+" && value >= 0) {
+    if(reGroups.groups.mathsign == "+" && value >= 0) {
         value = "+" + value;
     }
     return value;
