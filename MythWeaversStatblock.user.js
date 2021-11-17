@@ -1,14 +1,14 @@
 // ==UserScript==
-// @name         Myth-Weavers statblock
+// @name         Myth-Weavers Autofill
 // @namespace    http://tampermonkey.net/
-// @version      3.1
+// @version      3.2
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
 // @grant        none
 // @supportURL   https://github.com/BlackPhoenix/MythWeaversStatblock/issues
 // @homepageURL  https://github.com/BlackPhoenix/MythWeaversStatblock
-// @icon         https://www.google.com/s2/favicons?domain=myth-weavers.com
+// @icon         https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://myth-weavers.com&size=16
 // ==/UserScript==
 //
 // This script uses the "Private Notes" as a template to construct the statblock. It makes a lot of assumption
@@ -56,6 +56,12 @@ function WriteStatblock() {
 
     template = "::" + privateNotesField + "[?=STATBLOCK]::";
 
+    // Autofill: load templates (which should only do assignments - we are not storing the output anywhere)
+    statblockParse("::[AUTOFILL]::");
+
+    // Autofill: go through the list of aliases and set the fields' values
+    alias.forEach(computeField);
+
     var output = statblockParse(template);
     secondPass = true;
     output = statblockParse(output);
@@ -69,6 +75,17 @@ function WriteStatblock() {
 
     // Clear all alias mapping to release memory and restart from scratch on next run.
     alias.clear();
+}
+
+function computeField(value, key, map) {
+    var field = document.getElementsByName(key)[0];
+    if (field) {
+        //field = field[0];
+        var newValue = statblockParse(value);
+        if (newValue != field.value) { _sheet.set(key, newValue); }
+    } else {
+        console.log('Field "' + key + '" does not exist.');
+    }
 }
 
 // Parse a value.
@@ -98,10 +115,10 @@ function statblockParse(output, nestlevel = 0) {
 
         // - {wd("Tenser's Floating Disk")} to turn string into a string used in Wikidot's URLs
 
-        var reSearch = /((?<wslead>\s*)::(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>[\w-]+)\]|="(?<assign>.*?)"(?<immediate>!?))?::(?<wstrail>\s*)|{(?<mathsign>\+?)(?<math>MATH)(?<extra>\.\w*)?\((?<expression>.*?)\)}|{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}|{!--(?<comment>.*?)--}|{wd\("(?<wikidot>.*?)"\)})/gms
+        var reSearch = /((?<wslead>\s*)::(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>[\w-]+)\]|="(?<assign>.*?)"(?<immediate>!?))?::(?<wstrail>\s*)|{(?<mathsign>\+?)(?<math>MATH)(?<extra>\.\w*)?\((?<expression>.*?)\)}|{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>≤≥≠])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}|{!--(?<comment>.*?)--}|{wd\("(?<wikidot>.*?)"\)})/gms
         if (secondPass) {
             // On the second pass, we will catch identifiers or assignments that start with "?", such as ::?identifier[section]::
-            reSearch = /((?<wslead>\s*)::\??(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>[\w-]+)\]|="(?<assign>.*?)"(?<immediate>!?))?::(?<wstrail>\s*)|{(?<mathsign>\+?)(?<math>MATH)(?<extra>\.\w*)?\((?<expression>.*?)\)}|{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}|{!--(?<comment>.*?)--}|{wd\("(?<wikidot>.*?)"\)})/gms
+            reSearch = /((?<wslead>\s*)::\??(?<sign>\+?)(?<identifier>\w*)(\[(?<sectionModifiers>[=?]*)(?<section>[\w-]+)\]|="(?<assign>.*?)"(?<immediate>!?))?::(?<wstrail>\s*)|{(?<mathsign>\+?)(?<math>MATH)(?<extra>\.\w*)?\((?<expression>.*?)\)}|{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>≤≥≠])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}|{!--(?<comment>.*?)--}|{wd\("(?<wikidot>.*?)"\)})/gms
         }
         var fieldnames;
         while ((fieldnames = reSearch.exec(output)) !== null) {
@@ -262,7 +279,7 @@ function parseCondition(reGroups, nestlevel = 1) {
     //reSearch = /{\?\s*(?<expleft>.*?)\s*(?<comparesign>[<=>])\s*(?<expright>.*?)\s*{T}(?<iftrue>.*?){F}(?<iffalse>.*?)\?}/gs;
     // 0: entire match
     // 1: identifier
-    // 2: compare (<, =, or >)
+    // 2: compare (<, =, >, ≤, ≥, or ≠)
     // 3: compare to
     // 4: value if true
     // 5: value if false
@@ -284,6 +301,13 @@ function parseCondition(reGroups, nestlevel = 1) {
                 value = reGroups.groups.iffalse;
             }
             break;
+        case "≤":
+            if (leftExp <= rightExp) {
+                value = reGroups.groups.iftrue;
+            } else {
+                value = reGroups.groups.iffalse;
+            }
+            break;
         case ">":
             if (leftExp > rightExp) {
                 value = reGroups.groups.iftrue;
@@ -291,8 +315,22 @@ function parseCondition(reGroups, nestlevel = 1) {
                 value = reGroups.groups.iffalse;
             }
             break;
+        case "≥":
+            if (leftExp >= rightExp) {
+                value = reGroups.groups.iftrue;
+            } else {
+                value = reGroups.groups.iffalse;
+            }
+            break;
         case "=":
             if (leftExp == rightExp) {
+                value = reGroups.groups.iftrue;
+            } else {
+                value = reGroups.groups.iffalse;
+            }
+            break;
+        case "≠":
+            if (leftExp != rightExp) {
                 value = reGroups.groups.iftrue;
             } else {
                 value = reGroups.groups.iffalse;
