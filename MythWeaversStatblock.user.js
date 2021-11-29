@@ -8,6 +8,7 @@
 // @grant        none
 // @supportURL   https://github.com/BlackPhoenix/MythWeaversStatblock/issues
 // @homepageURL  https://github.com/BlackPhoenix/MythWeaversStatblock
+// @oldicon         https://www.google.com/s2/favicons?domain=myth-weavers.com&size=16
 // @icon         https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://myth-weavers.com&size=16
 // ==/UserScript==
 //
@@ -38,7 +39,7 @@ var secondPass = false;
 // Add a new button "Statblock" to the left of the Save button.
 var sbButtonLI = document.createElement("LI");
 var sbButton = document.createElement("BUTTON");
-sbButton.innerHTML = "Statblock";
+sbButton.innerHTML = "Autofill";
 sbButton.className = "btn btn-primary";
 sbButtonLI.appendChild(sbButton);
 sbButton.onclick = WriteStatblock;
@@ -124,15 +125,15 @@ function statblockParse(output, nestlevel = 0) {
         while ((fieldnames = reSearch.exec(output)) !== null) {
             var value = "";
             if (fieldnames.groups.identifier != null) {
-                value = parseIdentifier(fieldnames, nestlevel);
+                value = parseIdentifier(fieldnames, nestlevel + 1);
             } else if (fieldnames.groups.math) {
                 value = parseMath(fieldnames, nestlevel);
             } else if (fieldnames.groups.comparesign) {
-                value = parseCondition(fieldnames, nestlevel);
+                value = parseCondition(fieldnames, nestlevel + 1);
             } else if (fieldnames.groups.comment) {
                 value = "";
             } else if (fieldnames.groups.wikidot) {
-                value = statblockParse(fieldnames.groups.wikidot)
+                value = statblockParse(fieldnames.groups.wikidot, nestlevel + 1)
                   .toLowerCase()
                   .replaceAll(" ", "-")
                   .replaceAll("'", "")
@@ -159,7 +160,7 @@ function parseIdentifier(reGroups, nestlevel = 1) {
         // Yes, we are, so assign the value in the mapping table.
         if (reGroups.groups.immediate == "!") {
             // We are asked to evaluate the value right away
-            alias.set(reGroups.groups.identifier, statblockParse(reGroups.groups.assign));
+            alias.set(reGroups.groups.identifier, statblockParse(reGroups.groups.assign, nestlevel));
         } else {
             alias.set(reGroups.groups.identifier, reGroups.groups.assign);
         }
