@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers Autofill
 // @namespace    http://tampermonkey.net/
-// @version      3.2
+// @version      4.0
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
@@ -66,13 +66,6 @@ function WriteStatblock() {
     var output = statblockParse(template);
     secondPass = true;
     output = statblockParse(output);
-
-    if (document.title.includes(":: Star Wars Saga ::")) {
-        _sheet.set("__txt_statsummary", output);
-    } else {
-        // This works for D&D 5E
-        _sheet.set("__txt_statblock", output);
-    }
 
     // Clear all alias mapping to release memory and restart from scratch on next run.
     alias.clear();
