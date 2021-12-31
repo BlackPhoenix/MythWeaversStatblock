@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers Autofill
 // @namespace    http://tampermonkey.net/
-// @version      4.0
+// @version      4.1
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
@@ -63,9 +63,12 @@ function WriteStatblock() {
     // Autofill: go through the list of aliases and set the fields' values
     alias.forEach(computeField);
 
-    var output = statblockParse(template);
-    secondPass = true;
-    output = statblockParse(output);
+    // Statblock will be a special case, since it can have 2 runs
+    if (alias.has("__txt_statblock")) {
+        var output = statblockParse(alias.get("__txt_statblock"));
+        secondPass = true;
+        _sheet.set("__txt_statblock", statblockParse(output));
+    }
 
     // Clear all alias mapping to release memory and restart from scratch on next run.
     alias.clear();
