@@ -5,6 +5,7 @@
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheet.html
+// @match        https://og.myth-weavers.com/sheet.html
 // @grant        none
 // @supportURL   https://github.com/BlackPhoenix/MythWeaversStatblock/issues
 // @homepageURL  https://github.com/BlackPhoenix/MythWeaversStatblock
