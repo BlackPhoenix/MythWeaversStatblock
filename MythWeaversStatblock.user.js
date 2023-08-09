@@ -1,11 +1,12 @@
 // ==UserScript==
 // @name         Myth-Weavers Autofill
 // @namespace    http://tampermonkey.net/
-// @version      4.2
+// @version      4.3
 // @description  A better statblock generator
 // @author       BlackPhoenix
-// @match        https://www.myth-weavers.com/sheet.html
+// @match        https://www.myth-weavers.com/sheets/?id=*
 // @match        https://og.myth-weavers.com/sheet.html
+// @require      https://gist.github.com/raw/2625891/waitForKeyElements.js
 // @grant        none
 // @supportURL   https://github.com/BlackPhoenix/MythWeaversStatblock/issues
 // @homepageURL  https://github.com/BlackPhoenix/MythWeaversStatblock
@@ -36,17 +37,24 @@ var alias = new Map();
 var privateNotesField = "__txt_private_notes";
 var secondPass = false;
 
-// Add a new button "Statblock" to the left of the Save button.
-var sbButtonLI = document.createElement("LI");
-var sbButton = document.createElement("BUTTON");
-sbButton.innerHTML = "Autofill";
-sbButton.className = "btn btn-primary";
-sbButtonLI.appendChild(sbButton);
-sbButton.onclick = WriteStatblock;
-var sheetControls = document.getElementsByClassName("sheetcontrols")[0];
-sheetControls.insertBefore(sbButtonLI, sheetControls.childNodes[0]);
+waitForKeyElements(
+    ".sheetsave",
+    StartProcess
+    );
 
-// End main
+function StartProcess() {
+    // Add a new button "Statblock" to the left of the Save button.
+    var sbButtonLI = document.createElement("LI");
+    var sbButton = document.createElement("BUTTON");
+    sbButton.innerHTML = "Autofill";
+    sbButton.className = "btn btn-primary";
+    sbButtonLI.appendChild(sbButton);
+    sbButton.onclick = WriteStatblock;
+    var sheetControls = document.getElementsByClassName("sheetcontrols")[0];
+    sheetControls.insertBefore(sbButtonLI, sheetControls.childNodes[0]);
+
+    // End main
+}
 
 function WriteStatblock() {
     var template = "";
