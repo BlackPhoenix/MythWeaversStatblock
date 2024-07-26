@@ -1,7 +1,7 @@
 # Important:
 
 This script's function has changed a bit. Since I appear to be the only user, the documentation did not follow completely and is now a bit out-of-date.
-If you are having issues getting this to work, [drop me](https://www.myth-weavers.com/private.php?do=newpm&u=16146) a message on Myth-Weavers.
+If you are having issues getting this to work, [drop me](https://www.myth-weavers.com/index.php?/messenger/compose/&to=16146) a message on Myth-Weavers.
 
 Now, here is the outdated documentation:
 
