@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers Autofill
 // @namespace    http://tampermonkey.net/
-// @version      4.4
+// @version      4.5
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheets/?id=*
@@ -38,7 +38,7 @@ var privateNotesField = "__txt_private_notes";
 var secondPass = false;
 
 waitForKeyElements(
-    'button:contains("Save")',
+    "div.nav-item:has(button.btn.btn-primary[type='submit'])",    //'button:contains("Save")',
     StartProcess
     );
 
