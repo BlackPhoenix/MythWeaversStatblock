@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers Autofill
 // @namespace    http://tampermonkey.net/
-// @version      4.5
+// @version      4.6
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheets/?id=*
@@ -43,6 +43,12 @@ waitForKeyElements(
     );
 
 function StartProcess() {
+    const privateNotes = document.getElementsByName(privateNotesField)[0];
+    if (!privateNotes) {
+        console.log("Private Notes field not found yet, terminating.");
+        return false;
+    }
+    
     // Add a new button "Statblock" to the left of the Save button.
     var sbButton = document.createElement("BUTTON");
     sbButton.innerHTML = "Autofill";
@@ -50,6 +56,7 @@ function StartProcess() {
     sbButton.onclick = WriteStatblock;
     var sheetControls = document.getElementsByClassName("nav-item")[1];
     sheetControls.insertBefore(sbButton, sheetControls.childNodes[0]);
+    return false;    // Stop waitForKeyElements()
 }
 
 function WriteStatblock() {
