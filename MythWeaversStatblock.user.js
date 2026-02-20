@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers Autofill
 // @namespace    http://tampermonkey.net/
-// @version      4.5
+// @version      4.6
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheets/?id=*
@@ -46,7 +46,7 @@ function StartProcess() {
     const privateNotes = document.getElementsByName(privateNotesField)[0];
     if (!privateNotes) {
         console.log("Private Notes field not found yet, terminating.");
-        return true;
+        return false;
     }
     
     // Add a new button "Statblock" to the left of the Save button.
