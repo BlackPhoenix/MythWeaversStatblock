@@ -43,6 +43,12 @@ waitForKeyElements(
     );
 
 function StartProcess() {
+    const privateNotes = document.getElementsByName(privateNotesField)[0];
+    if (!privateNotes) {
+        console.log("Private Notes field not found yet, terminating.");
+        return true;
+    }
+    
     // Add a new button "Statblock" to the left of the Save button.
     var sbButton = document.createElement("BUTTON");
     sbButton.innerHTML = "Autofill";
