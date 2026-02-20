@@ -56,6 +56,7 @@ function StartProcess() {
     sbButton.onclick = WriteStatblock;
     var sheetControls = document.getElementsByClassName("nav-item")[1];
     sheetControls.insertBefore(sbButton, sheetControls.childNodes[0]);
+    return false;    // Stop waitForKeyElements()
 }
 
 function WriteStatblock() {
