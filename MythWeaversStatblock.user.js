@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Myth-Weavers Autofill
 // @namespace    http://tampermonkey.net/
-// @version      4.6
+// @version      4.7
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheets/?id=*
@@ -34,7 +34,18 @@
 // the content of the character sheet. It needs to be a global variable in order to be readable by all the
 // functions of this script.
 var alias = new Map();
+// List of possible field names to check in order
+const sourceFieldNames = [
+    "__txt_private_notes",
+    "__txt_Notes"               // SW Revised
+];
+const statblockFieldNames = [
+    "__txt_statblock",
+    "__txt_statsummary"                          // SW Revised
+];
+
 var privateNotesField = "__txt_private_notes";
+var statblockField = "__txt_statblock";
 var secondPass = false;
 
 waitForKeyElements(
@@ -43,6 +54,25 @@ waitForKeyElements(
     );
 
 function StartProcess() {
+    // Check each possible field name in order
+    for (const fieldName of sourceFieldNames) {
+        const field = document.getElementsByName(fieldName)[0];
+        if (field) {
+            privateNotesField = fieldName;
+            console.log("Private notes are " + privateNotesField);
+            break;
+        }
+    }
+
+    for (const fieldName of statblockFieldNames) {
+        const field = document.getElementsByName(fieldName)[0];
+        if (field) {
+            statblockField = fieldName;
+            console.log("Statblock is " + statblockField);
+            break;
+        }
+    }
+
     const privateNotes = document.getElementsByName(privateNotesField)[0];
     if (!privateNotes) {
         console.log("Private Notes field not found yet, terminating.");
@@ -75,10 +105,10 @@ function WriteStatblock() {
     alias.forEach(computeField);
 
     // Statblock will be a special case, since it can have 2 runs
-    if (alias.has("__txt_statblock")) {
-        var output = statblockParse(alias.get("__txt_statblock"));
+    if (alias.has(statblockField)) {
+        var output = statblockParse(alias.get(statblockField));
         secondPass = true;
-        _sheet.set("__txt_statblock", statblockParse(output));
+        _sheet.set(statblockField, statblockParse(output));
     }
 
     // Clear all alias mapping to release memory and restart from scratch on next run.
