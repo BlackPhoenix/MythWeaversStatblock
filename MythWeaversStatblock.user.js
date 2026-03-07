@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name         Myth-Weavers Autofill
 // @namespace    http://tampermonkey.net/
-// @version      4.7
+// @version      5
 // @description  A better statblock generator
 // @author       BlackPhoenix
+// @match        https://www.myth-weavers.com/idunn/sheets/?id=*
 // @match        https://www.myth-weavers.com/sheets/?id=*
 // @match        https://og.myth-weavers.com/sheet.html
 // @require      https://gist.github.com/raw/2625891/waitForKeyElements.js
