@@ -1,11 +1,10 @@
 // ==UserScript==
 // @name         Myth-Weavers Autofill
 // @namespace    http://tampermonkey.net/
-// @version      4.7
+// @version      6
 // @description  A better statblock generator
 // @author       BlackPhoenix
 // @match        https://www.myth-weavers.com/sheets/?id=*
-// @match        https://og.myth-weavers.com/sheet.html
 // @require      https://gist.github.com/raw/2625891/waitForKeyElements.js
 // @grant        none
 // @supportURL   https://github.com/BlackPhoenix/MythWeaversStatblock/issues
@@ -84,7 +83,7 @@ function StartProcess() {
     sbButton.innerHTML = "Autofill";
     sbButton.className = "btn btn-primary";
     sbButton.onclick = WriteStatblock;
-    var sheetControls = document.getElementsByClassName("nav-item")[1];
+    const sheetControls = document.querySelector('.nav-item .btn.btn-primary').closest('.nav-item');
     sheetControls.insertBefore(sbButton, sheetControls.childNodes[0]);
     return false;    // Stop waitForKeyElements()
 }
